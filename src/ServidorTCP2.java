@@ -2,9 +2,20 @@ import java.net.*;
 import java.util.Scanner;
 import java.io.*;
 
-public class ServidorTCP2 {
+public class ServidorTCP2 implements Runnable {
 
-	public static void main (String[] args) throws Exception {
+	Socket client;
+	ServerSocket server;
+	static int numClient;
+	String cadena = "";
+
+	public ServidorTCP2(Socket clientConnectat, ServerSocket server) {
+		this.client = clientConnectat;
+		this.server = server;
+		this.numClient ++;
+	}
+
+	public static void main (String[] args) throws IOException {
 
 		// **********SEGONA PART**********
 		Scanner teclado = new Scanner(System.in);
@@ -12,7 +23,7 @@ public class ServidorTCP2 {
 
 		int numPort = 60000;
 		ServerSocket servidor = new ServerSocket(numPort);
-		String cadena = "";
+
 
 
 		// Demanem el numClients per a indicar 
@@ -20,26 +31,46 @@ public class ServidorTCP2 {
 		System.out.println("Introdueix el num de clients que podra rebre el servidor: ");
 		int numClients = teclado.nextInt();
 
-		// Determinem les vegades que es conectaran els clients
-		for (int i = 0; i < numClients; i++) {
 
-			
-			Socket clientConnectat = null;
+		Runnable[] arrayRunnable = new Runnable[numClients];
+		Thread[] arrayThread = new Thread[numClients];
+
+		// Determinem les vegades que es conectaran els clients
+		for (int i = 0; i < arrayRunnable.length; i++) {
+
+
+			Socket clientConnectat = servidor.accept();
+
+			// Runnable
+			arrayRunnable[i] = new ServidorTCP2(clientConnectat, servidor);
+
+			// Thread
+			arrayThread[i] = new Thread(arrayRunnable[i]);
+			arrayThread[i].start();
+
+		}
+
+
+	}
+
+	@Override
+	public void run() {
+
+		try {
 			PrintWriter fsortida = null;
 			BufferedReader fentrada = null;
 
 			System.out.println("Esperant connexió... ");
-			clientConnectat = servidor.accept();
-			System.out.println("Client " + (i+1) + " connectat... ");
+			System.out.println("Client " + this.numClient + " connectat... ");
 
 			//FLUX DE SORTIDA AL CLIENT
-			fsortida = new PrintWriter(clientConnectat.getOutputStream(), true);
+			fsortida = new PrintWriter(this.client.getOutputStream(), true);
 
 
 			//FLUX D'ENTRADA DEL CLIENT
-			fentrada = new BufferedReader(new InputStreamReader(clientConnectat.getInputStream()));
+			fentrada = new BufferedReader(new InputStreamReader(this.client.getInputStream()));
 
-			
+
 			while ((cadena = fentrada.readLine()) != null) {
 
 				fsortida.println(cadena);
@@ -49,17 +80,13 @@ public class ServidorTCP2 {
 			}
 			fentrada.close();
 			fsortida.close();
-			clientConnectat.close();
+			this.client.close();
+			this.server.close();
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 
-
-		//TANCAR STREAMS I SOCKETS
-		System.out.println("Tancant connexió... ");
-		//		fentrada.close();
-		//		fsortida.close();
-		//		clientConnectat.close();
-		servidor.close();
-
 	}
-
 }
